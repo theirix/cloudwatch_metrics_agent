@@ -15,7 +15,7 @@ use tokio::sync::mpsc;
 use tokio::sync::Mutex as TokioMutex;
 
 use crate::config::CloudwatchConfig;
-use crate::metrics::{create_measurement, Measurement};
+use crate::metrics::*;
 use crate::publisher::{MetricPublisher, ConsolePublisher};
 use crate::cloudwatch::create_cloudwatch_publisher;
 
@@ -30,10 +30,11 @@ pub enum Message {
 
 /// Task for collecting metrics
 async fn metrics_collector(tx: mpsc::Sender<Message>, period: u32) {
+    let mut sys = create_measurement_engine();
     loop {
         println!("Metric tick");
 
-        let measurement = create_measurement();
+        let measurement = create_measurement(&mut sys);
 
         if let Err(err) = tx.send(Message::Measurement(measurement)).await {
             eprintln!("Send error: {}", err);
