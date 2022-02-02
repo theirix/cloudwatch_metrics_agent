@@ -50,7 +50,7 @@ async fn metrics_collector(tx: mpsc::Sender<PublisherMessage>,
     let mut series : Vec<Measurement> = vec![];
 
     loop {
-        println!("Metric tick");
+        //println!("Metric tick");
 
         let measurement = create_measurement(&mut sys);
         series.push(measurement);
@@ -121,7 +121,7 @@ pub async fn handle_shutdown(
     tokio::select! {
         _ = signal::ctrl_c() => {},
         _ = stream_sigterm.recv() => {},
-        _ = rx_additional_shutdown.recv() => {}
+        _ = rx_additional_shutdown.recv() => {},
     };
 
     println!("Got terminate condition");
@@ -180,9 +180,9 @@ pub async fn main_runner(
 
     println!("Started all tasks");
 
-    let (_, mut rx_additional) = mpsc::channel(1);
+    let (_tx, mut rx_additional_shutdown) = mpsc::channel(1);
     handle_shutdown(tx_collector_shutdown, tx_publisher_shutdown,
-                    &mut rx_additional,
+                    &mut rx_additional_shutdown,
                     collector_task, publisher_task).await?;
     Ok(())
 }
