@@ -5,7 +5,9 @@ use sysinfo::{ProcessRefreshKind, ProcessorExt, RefreshKind, System, SystemExt};
 pub struct Measurement {
     pub timestamp: std::time::SystemTime,
     pub mem_utilization: f64,
+    pub max_mem_utilization: f64,
     pub cpu_utilization: f64,
+    pub sample_count: u32
 }
 
 impl fmt::Debug for Measurement {
@@ -54,6 +56,8 @@ pub fn create_measurement(sys: &mut System) -> Measurement {
         timestamp: std::time::SystemTime::now(),
         cpu_utilization,
         mem_utilization,
+        max_mem_utilization: mem_utilization,
+        sample_count: 1
     }
 }
 
@@ -90,3 +94,19 @@ mod tests {
         }
     }
 }
+
+pub fn aggregate(series: &[Measurement]) -> Measurement {
+    if series.is_empty() {
+        panic!("No messages");
+    }
+    println!("Got aggregated {} from {} measurements", 1, series.len());
+    Measurement {
+        timestamp: series[0].timestamp,
+        cpu_utilization: series[0].cpu_utilization,
+        mem_utilization: series[0].mem_utilization,
+        max_mem_utilization: series[0].max_mem_utilization,
+        sample_count: series.len() as u32
+    }
+}
+
+
