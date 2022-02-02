@@ -1,9 +1,12 @@
 use chrono::{DateTime, Utc};
+use std::time::SystemTime;
 use std::fmt;
 use sysinfo::{ProcessRefreshKind, ProcessorExt, RefreshKind, System, SystemExt};
+use rstats::Stats;
+use rstats::mutstats::minmax;
 
 pub struct Measurement {
-    pub timestamp: std::time::SystemTime,
+    pub timestamp: SystemTime,
     pub mem_utilization: f64,
     pub max_mem_utilization: f64,
     pub cpu_utilization: f64,
@@ -53,7 +56,7 @@ pub fn create_measurement(sys: &mut System) -> Measurement {
     let mem_utilization: f64 = if !mem_val.is_nan() { mem_val } else { 0.0 };
 
     Measurement {
-        timestamp: std::time::SystemTime::now(),
+        timestamp: SystemTime::now(),
         cpu_utilization,
         mem_utilization,
         max_mem_utilization: mem_utilization,
@@ -61,11 +64,31 @@ pub fn create_measurement(sys: &mut System) -> Measurement {
     }
 }
 
+pub fn aggregate(series: &[Measurement]) -> Option<Measurement> {
+    if series.is_empty() {
+        return None
+    }
+    println!("Got aggregated {} from {} measurements", 1, series.len());
+    let avg_cpu: f64 = series.iter().map(|m| m.cpu_utilization ).collect::<Vec<f64>>().median().unwrap().median;
+    let avg_mem: f64 = series.iter().map(|m| m.mem_utilization ).collect::<Vec<f64>>().median().unwrap().median;
+    let max_mem : f64 = minmax(&series.iter().map(|m| m.mem_utilization ).collect::<Vec<f64>>()).max;
+    Some(Measurement {
+        timestamp: series[0].timestamp,
+        cpu_utilization: avg_cpu,
+        mem_utilization: avg_mem,
+        max_mem_utilization: max_mem,
+        sample_count: series.len() as u32
+    })
+}
+
+
+
 /// Tests
 #[cfg(test)]
 mod tests {
     use super::*;
     use more_asserts::*;
+    use std::time::Duration;
 
     #[test]
     fn test_measurement() {
@@ -93,20 +116,33 @@ mod tests {
             assert_le!(measurement.mem_utilization, 1.0);
         }
     }
-}
 
-pub fn aggregate(series: &[Measurement]) -> Measurement {
-    if series.is_empty() {
-        panic!("No messages");
+    #[test]
+    fn test_aggregate_empty() {
+        assert!(aggregate(&vec![]).is_none());
     }
-    println!("Got aggregated {} from {} measurements", 1, series.len());
-    Measurement {
-        timestamp: series[0].timestamp,
-        cpu_utilization: series[0].cpu_utilization,
-        mem_utilization: series[0].mem_utilization,
-        max_mem_utilization: series[0].max_mem_utilization,
-        sample_count: series.len() as u32
+
+    #[test]
+    fn test_aggregate_multiple() {
+        let base = SystemTime::now();
+        let n = 10;
+        let measurements : Vec<Measurement> = (0..n).map( |k| {
+            let ts = base + Duration::from_secs(k*2);
+            Measurement {
+                timestamp: ts,
+                cpu_utilization: k as f64 * 0.05,
+                mem_utilization: k as f64 * 0.07,
+                max_mem_utilization: k as f64 * 0.07,
+                sample_count: 1
+            }
+        }).collect();
+        let agg = aggregate(&measurements).unwrap();
+        println!("Agg: {:?}", agg);
+        assert_eq!(agg.sample_count, n as u32);
+        // avg of series 0..(k-1)*b is (0 + k-1)*b/2 / n = (k-1)*b/2
+        assert!((agg.cpu_utilization - (0.05/2.0*((n-1) as f64))).abs() < 0.001);
+        assert!((agg.mem_utilization - (0.07/2.0*((n-1) as f64))).abs() < 0.001);
+        assert!((agg.max_mem_utilization - (0.07*(n-1) as f64)).abs() < 0.001);
     }
+
 }
-
-

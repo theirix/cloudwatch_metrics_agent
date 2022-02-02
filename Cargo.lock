@@ -21,6 +21,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "anyhow"
+version = "1.0.53"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "94a45b455c14666b85fc40a019e8ab9eb75e3a124e05494f5397122bc9eb06e0"
+
+[[package]]
 name = "async-trait"
 version = "0.1.52"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -410,6 +416,7 @@ dependencies = [
  "aws-sdk-cloudwatch",
  "chrono",
  "more-asserts",
+ "rstats",
  "structopt",
  "sysinfo",
  "tokio",
@@ -701,6 +708,12 @@ dependencies = [
  "autocfg",
  "hashbrown",
 ]
+
+[[package]]
+name = "indxvec"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e7a7f71e2a3d4a70530703225a4f1b53632fefc41d9442f84266ef8750670da4"
 
 [[package]]
 name = "instant"
@@ -1057,6 +1070,16 @@ dependencies = [
  "untrusted",
  "web-sys",
  "winapi",
+]
+
+[[package]]
+name = "rstats"
+version = "1.0.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "678a4d63bde91f35ecf773f5895b29e6305ebf1615aff865f405759cb4a57ec3"
+dependencies = [
+ "anyhow",
+ "indxvec",
 ]
 
 [[package]]

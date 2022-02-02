@@ -59,14 +59,13 @@ async fn metrics_collector(tx: mpsc::Sender<PublisherMessage>,
             Ok(message) => {
                 match message {
                     CollectorMessage::Aggregation => {
-                        if !series.is_empty() {
-                            let aggregated_measurement = aggregate(&series);
+                        if let Some(aggregated_measurement) = aggregate(&series) {
                             series.clear();
                             // now send
                             if let Err(err) = tx.send(PublisherMessage::Metric(aggregated_measurement)).await {
                                 eprintln!("Send to metric channel error: {}", err);
                                 break;
-                            };
+                            }
                         }
                     },
                     CollectorMessage::Quit => {
