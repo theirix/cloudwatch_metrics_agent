@@ -14,6 +14,7 @@ use tokio::signal::unix as signal_unix;
 use tokio::sync::mpsc;
 use tokio::sync::Mutex as TokioMutex;
 use tokio::sync::mpsc::error::TryRecvError;
+use log::{debug, error, info, warn};
 
 use crate::config::CloudwatchConfig;
 use crate::metrics::*;
@@ -50,7 +51,7 @@ async fn metrics_collector(tx: mpsc::Sender<PublisherMessage>,
     let mut series : Vec<Measurement> = vec![];
 
     loop {
-        //println!("Metric tick");
+        debug!("Metric tick");
 
         let measurement = create_measurement(&mut sys);
         series.push(measurement);
@@ -63,26 +64,26 @@ async fn metrics_collector(tx: mpsc::Sender<PublisherMessage>,
                             series.clear();
                             // now send
                             if let Err(err) = tx.send(PublisherMessage::Metric(aggregated_measurement)).await {
-                                eprintln!("Send to metric channel error: {}", err);
+                                error!("Send to metric channel error: {}", err);
                                 break;
                             }
                         }
                     },
                     CollectorMessage::Quit => {
-                        println!("Requested to quit");
+                        info!("Requested to quit");
                         break;
                     }
                 }
             },
             Err(TryRecvError::Empty) => (),
             Err(TryRecvError::Disconnected) => {
-                println!("Aggregation channel disconnected");
+                warn!("Aggregation channel disconnected");
             }
         };
 
         tokio::time::sleep(MEASUREMENT_PERIOD).await;
     }
-    println!("Collector finished");
+    info!("Collector finished");
 }
 
 /// Task for publishing metrics
@@ -93,20 +94,20 @@ async fn metrics_publisher(
     while let Some(message) = rx.recv().await {
         match message {
             PublisherMessage::Metric(measurement) => {
-                println!("Received {:?}", measurement);
+                debug!("Received {:?}", measurement);
                 let mut ref_publisher = publisher.lock().await;
                 let res = ref_publisher.send(measurement).await;
                 if let Err(err) = res {
-                    eprintln!("Failed to send metrics: {}", err);
+                    error!("Failed to send metrics: {}", err);
                 }
             }
             PublisherMessage::Quit => {
-                println!("Exiting receiver");
+                info!("Exiting receiver");
                 break;
             }
         }
     }
-    println!("Publisher finished");
+    info!("Publisher finished");
 }
 
 pub async fn handle_shutdown(
@@ -124,20 +125,20 @@ pub async fn handle_shutdown(
         _ = rx_additional_shutdown.recv() => {},
     };
 
-    println!("Got terminate condition");
+    info!("Got terminate condition");
 
     // Try to aggregate last time
-    println!("Aggregate last time");
+    info!("Aggregate last time");
     tx_collector_shutdown.send(CollectorMessage::Aggregation).await.unwrap();
     tx_collector_shutdown.send(CollectorMessage::Quit).await.unwrap();
     let _ = collector_task.await;
 
     // Wait for publisher
-    println!("Wait for publisher task completion...");
+    info!("Wait for publisher task completion...");
     tx_publisher_shutdown.send(PublisherMessage::Quit).await.unwrap();
     let _ = publisher_task.await;
 
-    println!("All tasks completed");
+    info!("All tasks completed");
 
     Ok(())
 }
@@ -162,7 +163,7 @@ pub async fn main_runner(
         loop {
             tokio::time::sleep(Duration::from_secs(period as u64)).await;
             if let Err(err) = tx_aggregation.send(CollectorMessage::Aggregation).await {
-                eprintln!("Cannot send Aggregation message to collector: {}", err);
+                error!("Cannot send Aggregation message to collector: {}", err);
             }
         }
     });
@@ -178,7 +179,7 @@ pub async fn main_runner(
         metrics_publisher(&mut rx_metric, &publisher).await;
     });
 
-    println!("Started all tasks");
+    info!("Started all tasks");
 
     let (_tx, mut rx_additional_shutdown) = mpsc::channel(1);
     handle_shutdown(tx_collector_shutdown, tx_publisher_shutdown,
@@ -194,9 +195,14 @@ mod tests {
     use more_asserts::*;
     use async_trait::async_trait;
 
+    fn init_log() {
+        let _ = env_logger::builder().is_test(true).try_init();
+    }
+
     /// Check collecting metrics
     #[tokio::test]
     async fn test_collector_multiple() {
+        init_log();
         let (tx_metric, mut rx_metric) = mpsc::channel(4);
         let (tx_aggregation, mut rx_aggregation) = mpsc::channel(4);
 
@@ -240,6 +246,7 @@ mod tests {
     /// Check publishing to a fake publisher
     #[tokio::test]
     async fn test_publish() {
+        init_log();
         let (tx_metric, mut rx_metric) = mpsc::channel(4);
         let (tx_aggregation, mut rx_aggregation) = mpsc::channel(4);
 
@@ -288,6 +295,7 @@ mod tests {
     /// Ensures that failure in submitting metrics does not stop publisher
     #[tokio::test]
     async fn test_publish_fails() {
+        init_log();
         let (tx_metric, mut rx_metric) = mpsc::channel(4);
         let (tx_aggregation, mut rx_aggregation) = mpsc::channel(4);
 
@@ -320,6 +328,7 @@ mod tests {
     /// Check publishing to a fake publisher
     #[tokio::test]
     async fn test_publish_remaining() {
+        init_log();
         let (tx_metric, mut rx_metric) = mpsc::channel(4);
         let (tx_aggregation, mut rx_aggregation) = mpsc::channel(4);
 

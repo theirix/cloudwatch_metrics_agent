@@ -4,6 +4,7 @@ use std::fmt;
 use sysinfo::{ProcessRefreshKind, ProcessorExt, RefreshKind, System, SystemExt};
 use rstats::Stats;
 use rstats::mutstats::minmax;
+use log::*;
 
 pub struct Measurement {
     pub timestamp: SystemTime,
@@ -68,7 +69,7 @@ pub fn aggregate(series: &[Measurement]) -> Option<Measurement> {
     if series.is_empty() {
         return None
     }
-    println!("Got aggregated {} from {} measurements", 1, series.len());
+    debug!("Got aggregated {} from {} measurements", 1, series.len());
     let avg_cpu: f64 = series.iter().map(|m| m.cpu_utilization ).collect::<Vec<f64>>().median().unwrap().median;
     let avg_mem: f64 = series.iter().map(|m| m.mem_utilization ).collect::<Vec<f64>>().median().unwrap().median;
     let max_mem : f64 = minmax(&series.iter().map(|m| m.mem_utilization ).collect::<Vec<f64>>()).max;
@@ -89,6 +90,10 @@ mod tests {
     use super::*;
     use more_asserts::*;
     use std::time::Duration;
+
+    fn init_log() {
+        let _ = env_logger::builder().is_test(true).try_init();
+    }
 
     #[test]
     fn test_measurement() {
@@ -124,6 +129,8 @@ mod tests {
 
     #[test]
     fn test_aggregate_multiple() {
+        init_log();
+
         let base = SystemTime::now();
         let n = 10;
         let measurements : Vec<Measurement> = (0..n).map( |k| {

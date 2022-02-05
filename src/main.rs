@@ -1,6 +1,7 @@
 use cloudwatch_metrics_agent::main_runner;
 use cloudwatch_metrics_agent::config::CloudwatchConfig;
 use structopt::StructOpt;
+use log::info;
 
 #[derive(Debug, StructOpt)]
 struct Opt {
@@ -34,7 +35,7 @@ async fn main() -> Result<(), aws_sdk_cloudwatch::Error> {
 
     main_runner(cloudwatch_config, opt.dryrun, opt.period).await.unwrap();
 
-    println!("Done");
+    info!("Done");
     Ok(())
 }
 

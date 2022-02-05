@@ -4,6 +4,7 @@ use crate::publisher::MetricPublisher;
 
 use async_trait::async_trait;
 use aws_config::meta::region::RegionProviderChain;
+use log::info;
 
 /// Sink implementation that sends metrics to Cloudwatch
 pub struct CloudwatchPublisher {
@@ -29,7 +30,7 @@ async fn create_client(_config: &CloudwatchConfig) -> aws_sdk_cloudwatch::Client
 impl MetricPublisher for CloudwatchPublisher {
 
     async fn send(&mut self, measurement: Measurement) -> Result<(), Box<dyn std::error::Error>> {
-        println!("Sending measurement to CloudWatch {:?}", measurement);
+        info!("Sending measurement to CloudWatch {:?}", measurement);
 
         let mut request_builder = self
             .client
