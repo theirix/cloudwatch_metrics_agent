@@ -1,17 +1,17 @@
 use chrono::{DateTime, Utc};
-use std::time::SystemTime;
-use std::fmt;
-use sysinfo::{ProcessRefreshKind, ProcessorExt, RefreshKind, System, SystemExt};
-use rstats::Stats;
-use rstats::mutstats::minmax;
 use log::*;
+use rstats::mutstats::minmax;
+use rstats::Stats;
+use std::fmt;
+use std::time::SystemTime;
+use sysinfo::{ProcessRefreshKind, ProcessorExt, RefreshKind, System, SystemExt};
 
 pub struct Measurement {
     pub timestamp: SystemTime,
     pub mem_utilization: f64,
     pub max_mem_utilization: f64,
     pub cpu_utilization: f64,
-    pub sample_count: u32
+    pub sample_count: u32,
 }
 
 impl fmt::Debug for Measurement {
@@ -61,28 +61,44 @@ pub fn create_measurement(sys: &mut System) -> Measurement {
         cpu_utilization,
         mem_utilization,
         max_mem_utilization: mem_utilization,
-        sample_count: 1
+        sample_count: 1,
     }
 }
 
 pub fn aggregate(series: &[Measurement]) -> Option<Measurement> {
     if series.is_empty() {
-        return None
+        return None;
     }
     debug!("Got aggregated {} from {} measurements", 1, series.len());
-    let avg_cpu: f64 = series.iter().map(|m| m.cpu_utilization ).collect::<Vec<f64>>().median().unwrap().median;
-    let avg_mem: f64 = series.iter().map(|m| m.mem_utilization ).collect::<Vec<f64>>().median().unwrap().median;
-    let max_mem : f64 = minmax(&series.iter().map(|m| m.mem_utilization ).collect::<Vec<f64>>()).max;
+    let avg_cpu: f64 = series
+        .iter()
+        .map(|m| m.cpu_utilization)
+        .collect::<Vec<f64>>()
+        .median()
+        .unwrap()
+        .median;
+    let avg_mem: f64 = series
+        .iter()
+        .map(|m| m.mem_utilization)
+        .collect::<Vec<f64>>()
+        .median()
+        .unwrap()
+        .median;
+    let max_mem: f64 = minmax(
+        &series
+            .iter()
+            .map(|m| m.mem_utilization)
+            .collect::<Vec<f64>>(),
+    )
+    .max;
     Some(Measurement {
         timestamp: series[0].timestamp,
         cpu_utilization: avg_cpu,
         mem_utilization: avg_mem,
         max_mem_utilization: max_mem,
-        sample_count: series.len() as u32
+        sample_count: series.len() as u32,
     })
 }
-
-
 
 /// Tests
 #[cfg(test)]
@@ -133,23 +149,24 @@ mod tests {
 
         let base = SystemTime::now();
         let n = 10;
-        let measurements : Vec<Measurement> = (0..n).map( |k| {
-            let ts = base + Duration::from_secs(k*2);
-            Measurement {
-                timestamp: ts,
-                cpu_utilization: k as f64 * 0.05,
-                mem_utilization: k as f64 * 0.07,
-                max_mem_utilization: k as f64 * 0.07,
-                sample_count: 1
-            }
-        }).collect();
+        let measurements: Vec<Measurement> = (0..n)
+            .map(|k| {
+                let ts = base + Duration::from_secs(k * 2);
+                Measurement {
+                    timestamp: ts,
+                    cpu_utilization: k as f64 * 0.05,
+                    mem_utilization: k as f64 * 0.07,
+                    max_mem_utilization: k as f64 * 0.07,
+                    sample_count: 1,
+                }
+            })
+            .collect();
         let agg = aggregate(&measurements).unwrap();
         println!("Agg: {:?}", agg);
         assert_eq!(agg.sample_count, n as u32);
         // avg of series 0..(k-1)*b is (0 + k-1)*b/2 / n = (k-1)*b/2
-        assert!((agg.cpu_utilization - (0.05/2.0*((n-1) as f64))).abs() < 0.001);
-        assert!((agg.mem_utilization - (0.07/2.0*((n-1) as f64))).abs() < 0.001);
-        assert!((agg.max_mem_utilization - (0.07*(n-1) as f64)).abs() < 0.001);
+        assert!((agg.cpu_utilization - (0.05 / 2.0 * ((n - 1) as f64))).abs() < 0.001);
+        assert!((agg.mem_utilization - (0.07 / 2.0 * ((n - 1) as f64))).abs() < 0.001);
+        assert!((agg.max_mem_utilization - (0.07 * (n - 1) as f64)).abs() < 0.001);
     }
-
 }

@@ -6,8 +6,7 @@ use log::info;
 /// Generic trait
 #[async_trait]
 pub trait MetricPublisher {
-    async fn send(&mut self, measurement: Measurement
-                  ) -> Result<(), Box<dyn std::error::Error>>;
+    async fn send(&mut self, measurement: Measurement) -> Result<(), Box<dyn std::error::Error>>;
 }
 
 /// Sink implementation that just logs metrics
@@ -20,4 +19,3 @@ impl MetricPublisher for ConsolePublisher {
         Ok(())
     }
 }
-

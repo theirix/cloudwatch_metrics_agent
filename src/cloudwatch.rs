@@ -25,10 +25,8 @@ async fn create_client(_config: &CloudwatchConfig) -> aws_sdk_cloudwatch::Client
     aws_sdk_cloudwatch::Client::new(&shared_config)
 }
 
-
 #[async_trait]
 impl MetricPublisher for CloudwatchPublisher {
-
     async fn send(&mut self, measurement: Measurement) -> Result<(), Box<dyn std::error::Error>> {
         info!("Sending measurement to CloudWatch {:?}", measurement);
 
@@ -72,4 +70,3 @@ impl MetricPublisher for CloudwatchPublisher {
         }
     }
 }
-

@@ -2,29 +2,27 @@
 //#![allow(unused_variables)]
 //#![allow(unused_imports)]
 
+mod cloudwatch;
 pub mod config;
 mod metrics;
 mod publisher;
-mod cloudwatch;
 
+use log::{debug, error, info, warn};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::signal;
 use tokio::signal::unix as signal_unix;
 use tokio::sync::mpsc;
-use tokio::sync::Mutex as TokioMutex;
 use tokio::sync::mpsc::error::TryRecvError;
-use log::{debug, error, info, warn};
+use tokio::sync::Mutex as TokioMutex;
 
+use crate::cloudwatch::create_cloudwatch_publisher;
 use crate::config::CloudwatchConfig;
 use crate::metrics::*;
-use crate::publisher::{MetricPublisher, ConsolePublisher};
-use crate::cloudwatch::create_cloudwatch_publisher;
-
+use crate::publisher::{ConsolePublisher, MetricPublisher};
 
 /// How often collect samples
-const MEASUREMENT_PERIOD : Duration = Duration::from_millis(900);
-
+const MEASUREMENT_PERIOD: Duration = Duration::from_millis(900);
 
 /// Message between collector task and publisher task
 #[derive(Debug)]
@@ -39,16 +37,17 @@ pub enum PublisherMessage {
 #[derive(Debug)]
 pub enum CollectorMessage {
     Aggregation,
-    Quit
+    Quit,
 }
 
-
 /// Task for collecting metrics
-async fn metrics_collector(tx: mpsc::Sender<PublisherMessage>,
-                           rx_aggregation: &mut mpsc::Receiver<CollectorMessage>) {
+async fn metrics_collector(
+    tx: mpsc::Sender<PublisherMessage>,
+    rx_aggregation: &mut mpsc::Receiver<CollectorMessage>,
+) {
     let mut sys = create_measurement_engine();
 
-    let mut series : Vec<Measurement> = vec![];
+    let mut series: Vec<Measurement> = vec![];
 
     loop {
         debug!("Metric tick");
@@ -63,18 +62,21 @@ async fn metrics_collector(tx: mpsc::Sender<PublisherMessage>,
                         if let Some(aggregated_measurement) = aggregate(&series) {
                             series.clear();
                             // now send
-                            if let Err(err) = tx.send(PublisherMessage::Metric(aggregated_measurement)).await {
+                            if let Err(err) = tx
+                                .send(PublisherMessage::Metric(aggregated_measurement))
+                                .await
+                            {
                                 error!("Send to metric channel error: {}", err);
                                 break;
                             }
                         }
-                    },
+                    }
                     CollectorMessage::Quit => {
                         info!("Requested to quit");
                         break;
                     }
                 }
-            },
+            }
             Err(TryRecvError::Empty) => (),
             Err(TryRecvError::Disconnected) => {
                 warn!("Aggregation channel disconnected");
@@ -129,13 +131,22 @@ pub async fn handle_shutdown(
 
     // Try to aggregate last time
     info!("Aggregate last time");
-    tx_collector_shutdown.send(CollectorMessage::Aggregation).await.unwrap();
-    tx_collector_shutdown.send(CollectorMessage::Quit).await.unwrap();
+    tx_collector_shutdown
+        .send(CollectorMessage::Aggregation)
+        .await
+        .unwrap();
+    tx_collector_shutdown
+        .send(CollectorMessage::Quit)
+        .await
+        .unwrap();
     let _ = collector_task.await;
 
     // Wait for publisher
     info!("Wait for publisher task completion...");
-    tx_publisher_shutdown.send(PublisherMessage::Quit).await.unwrap();
+    tx_publisher_shutdown
+        .send(PublisherMessage::Quit)
+        .await
+        .unwrap();
     let _ = publisher_task.await;
 
     info!("All tasks completed");
@@ -172,7 +183,9 @@ pub async fn main_runner(
     let publisher: Arc<TokioMutex<dyn MetricPublisher + Send + Sync>> = if dryrun {
         Arc::new(TokioMutex::new(ConsolePublisher {}))
     } else {
-        Arc::new(TokioMutex::new(create_cloudwatch_publisher(cloudwatch_config).await))
+        Arc::new(TokioMutex::new(
+            create_cloudwatch_publisher(cloudwatch_config).await,
+        ))
     };
 
     let publisher_task = tokio::spawn(async move {
@@ -182,9 +195,14 @@ pub async fn main_runner(
     info!("Started all tasks");
 
     let (_tx, mut rx_additional_shutdown) = mpsc::channel(1);
-    handle_shutdown(tx_collector_shutdown, tx_publisher_shutdown,
-                    &mut rx_additional_shutdown,
-                    collector_task, publisher_task).await?;
+    handle_shutdown(
+        tx_collector_shutdown,
+        tx_publisher_shutdown,
+        &mut rx_additional_shutdown,
+        collector_task,
+        publisher_task,
+    )
+    .await?;
     Ok(())
 }
 
@@ -192,8 +210,8 @@ pub async fn main_runner(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use more_asserts::*;
     use async_trait::async_trait;
+    use more_asserts::*;
 
     fn init_log() {
         let _ = env_logger::builder().is_test(true).try_init();
@@ -232,12 +250,15 @@ mod tests {
     }
 
     struct FakePublisher {
-        measurements: Vec<Measurement>
+        measurements: Vec<Measurement>,
     }
 
     #[async_trait]
     impl MetricPublisher for FakePublisher {
-        async fn send(&mut self, measurement: Measurement) -> Result<(), Box<dyn std::error::Error>> {
+        async fn send(
+            &mut self,
+            measurement: Measurement,
+        ) -> Result<(), Box<dyn std::error::Error>> {
             self.measurements.push(measurement);
             Ok(())
         }
@@ -254,8 +275,10 @@ mod tests {
         let collect_task = tokio::spawn(async move {
             metrics_collector(tx_metric, &mut rx_aggregation).await;
         });
-        let fake_publisher = Arc::new(TokioMutex::new(FakePublisher{ measurements: vec![] }));
-        let publisher : Arc<TokioMutex<dyn MetricPublisher + Send + Sync>> = fake_publisher.clone();
+        let fake_publisher = Arc::new(TokioMutex::new(FakePublisher {
+            measurements: vec![],
+        }));
+        let publisher: Arc<TokioMutex<dyn MetricPublisher + Send + Sync>> = fake_publisher.clone();
 
         let publisher_task = tokio::spawn(async move {
             metrics_publisher(&mut rx_metric, &publisher).await;
@@ -277,12 +300,15 @@ mod tests {
 
     struct FailurePublisher {
         counter: u32,
-        measurements: Vec<Measurement>
+        measurements: Vec<Measurement>,
     }
 
     #[async_trait]
     impl MetricPublisher for FailurePublisher {
-        async fn send(&mut self, measurement: Measurement) -> Result<(), Box<dyn std::error::Error>> {
+        async fn send(
+            &mut self,
+            measurement: Measurement,
+        ) -> Result<(), Box<dyn std::error::Error>> {
             self.counter += 1;
             if (self.counter % 2) == 0 {
                 return Err(Box::new(std::env::VarError::NotPresent));
@@ -304,8 +330,12 @@ mod tests {
         let collect_task = tokio::spawn(async move {
             metrics_collector(tx_metric, &mut rx_aggregation).await;
         });
-        let failure_publisher = Arc::new(TokioMutex::new(FailurePublisher{ counter: 0, measurements: vec![] }));
-        let publisher : Arc<TokioMutex<dyn MetricPublisher + Send + Sync>> = failure_publisher.clone();
+        let failure_publisher = Arc::new(TokioMutex::new(FailurePublisher {
+            counter: 0,
+            measurements: vec![],
+        }));
+        let publisher: Arc<TokioMutex<dyn MetricPublisher + Send + Sync>> =
+            failure_publisher.clone();
 
         let publisher_task = tokio::spawn(async move {
             metrics_publisher(&mut rx_metric, &publisher).await;
@@ -338,8 +368,10 @@ mod tests {
         let collect_task = tokio::spawn(async move {
             metrics_collector(tx_metric, &mut rx_aggregation).await;
         });
-        let fake_publisher = Arc::new(TokioMutex::new(FakePublisher{ measurements: vec![] }));
-        let publisher : Arc<TokioMutex<dyn MetricPublisher + Send + Sync>> = fake_publisher.clone();
+        let fake_publisher = Arc::new(TokioMutex::new(FakePublisher {
+            measurements: vec![],
+        }));
+        let publisher: Arc<TokioMutex<dyn MetricPublisher + Send + Sync>> = fake_publisher.clone();
 
         let publisher_task = tokio::spawn(async move {
             metrics_publisher(&mut rx_metric, &publisher).await;
@@ -353,14 +385,19 @@ mod tests {
         let (tx_additional_shutdown, mut rx_additional_shutdown) = mpsc::channel(1);
         tx_additional_shutdown.send(()).await.unwrap();
 
-        handle_shutdown(tx_collector_shutdown, tx_publisher_shutdown,
-                        &mut rx_additional_shutdown,
-                        collect_task, publisher_task).await.unwrap();
+        handle_shutdown(
+            tx_collector_shutdown,
+            tx_publisher_shutdown,
+            &mut rx_additional_shutdown,
+            collect_task,
+            publisher_task,
+        )
+        .await
+        .unwrap();
 
         // there should be two messages - one after explicit Aggregation,
         // second due to shutdown
         let ref_publisher = &fake_publisher.lock().await;
         assert_eq!(ref_publisher.measurements.len(), 2);
     }
-
 }
