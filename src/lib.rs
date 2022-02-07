@@ -212,15 +212,11 @@ mod tests {
     use super::*;
     use async_trait::async_trait;
     use more_asserts::*;
-
-    fn init_log() {
-        let _ = env_logger::builder().is_test(true).try_init();
-    }
+    use test_log::test;
 
     /// Check collecting metrics
-    #[tokio::test]
+    #[test(tokio::test)]
     async fn test_collector_multiple() {
-        init_log();
         let (tx_metric, mut rx_metric) = mpsc::channel(4);
         let (tx_aggregation, mut rx_aggregation) = mpsc::channel(4);
 
@@ -265,9 +261,8 @@ mod tests {
     }
 
     /// Check publishing to a fake publisher
-    #[tokio::test]
+    #[test(tokio::test)]
     async fn test_publish() {
-        init_log();
         let (tx_metric, mut rx_metric) = mpsc::channel(4);
         let (tx_aggregation, mut rx_aggregation) = mpsc::channel(4);
 
@@ -319,9 +314,8 @@ mod tests {
     }
 
     /// Ensures that failure in submitting metrics does not stop publisher
-    #[tokio::test]
+    #[test(tokio::test)]
     async fn test_publish_fails() {
-        init_log();
         let (tx_metric, mut rx_metric) = mpsc::channel(4);
         let (tx_aggregation, mut rx_aggregation) = mpsc::channel(4);
 
@@ -356,9 +350,8 @@ mod tests {
     }
 
     /// Check publishing to a fake publisher
-    #[tokio::test]
+    #[test(tokio::test)]
     async fn test_publish_remaining() {
-        init_log();
         let (tx_metric, mut rx_metric) = mpsc::channel(4);
         let (tx_aggregation, mut rx_aggregation) = mpsc::channel(4);
 

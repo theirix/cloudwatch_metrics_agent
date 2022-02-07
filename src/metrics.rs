@@ -106,10 +106,7 @@ mod tests {
     use super::*;
     use more_asserts::*;
     use std::time::Duration;
-
-    fn init_log() {
-        let _ = env_logger::builder().is_test(true).try_init();
-    }
+    use test_log::test;
 
     #[test]
     fn test_measurement() {
@@ -145,8 +142,6 @@ mod tests {
 
     #[test]
     fn test_aggregate_multiple() {
-        init_log();
-
         let base = SystemTime::now();
         let n = 10;
         let measurements: Vec<Measurement> = (0..n)
