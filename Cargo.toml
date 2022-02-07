@@ -15,11 +15,14 @@ aws-config = "0.6.0"
 aws-sdk-cloudwatch = "0.6.0"
 tokio = { version = "1", features = ["full"] }
 structopt = "0.3"
-tracing-subscriber = { version = "0.3.5", features = ["env-filter"] }
 sysinfo = "0.23.0"
 chrono = "0.4.19"
 more-asserts = "0.2.2"
 async-trait = "0.1.52"
 rstats = "1.0.8"
 log = "~0.4"
-env_logger = "~0.9"
+env_logger = { version = "~0.9", features = ["atty"] }
+atty = "^0.2"
+
+[dev-dependencies]
+test-log = "0.2.8"

@@ -24,7 +24,13 @@ struct Opt {
 
 #[tokio::main]
 async fn main() -> Result<(), aws_sdk_cloudwatch::Error> {
-    tracing_subscriber::fmt::init();
+    env_logger::Builder::from_default_env()
+        .write_style(if atty::is(atty::Stream::Stdout) {
+            env_logger::WriteStyle::Auto
+        } else {
+            env_logger::WriteStyle::Never
+        })
+        .init();
 
     let opt = Opt::from_args();
     let cloudwatch_config = CloudwatchConfig {
