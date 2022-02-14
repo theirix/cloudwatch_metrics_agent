@@ -1,0 +1,83 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  artifacts:
+    name: Publish target ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+
+    - name: Install stable toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+        target: ${{ matrix.target }}
+
+    - name: Install dependencies
+      if: matrix.target == 'x86_64-unknown-linux-musl'
+      run: sudo apt-get install musl-tools
+
+    - name: Build artifact
+      run: cargo build --release --target=${{ matrix.target }}
+
+    - name: Compress artifact
+      shell: bash
+      run: |
+        cp "target/${{ matrix.target }}/release/cloudwatch_metrics_agent" \
+          "cloudwatch_metrics_agent-${{ github.ref_name }}-${{ matrix.target }}"
+        zip "cloudwatch_metrics_agent-${{ github.ref_name }}-${{ matrix.target }}.zip" \
+          "cloudwatch_metrics_agent-${{ github.ref_name }}-${{ matrix.target }}"
+
+    - name: Upload artifact to release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: cloudwatch_metrics_agent*.zip
+
+  changelog:
+    name: Changelog
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Make release notes from changelog
+        uses: anton-yurchenko/git-release@v4.2.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    name: Publish to crates.io
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Run cargo publish
+        uses: actions-rs/cargo@v1
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        with:
+          command: publish
