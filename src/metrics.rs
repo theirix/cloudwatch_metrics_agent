@@ -92,7 +92,7 @@ pub fn aggregate(series: &[Measurement]) -> Option<Measurement> {
     )
     .max;
     Some(Measurement {
-        timestamp: series[series.len()-1].timestamp,
+        timestamp: series[series.len() - 1].timestamp,
         cpu_utilization: avg_cpu,
         mem_utilization: avg_mem,
         max_mem_utilization: max_mem,
