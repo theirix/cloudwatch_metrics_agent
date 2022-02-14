@@ -1,12 +1,14 @@
 [package]
 name = "cloudwatch_metrics_agent"
-version = "0.1.0"
+version = "0.1.3"
 edition = "2021"
-authors = ["theirix@gmail.com"]
-repository = "https://github.com/theirix/cloudwatch_metric_agent"
+authors = ["theirix <theirix@gmail.com>"]
+repository = "https://github.com/theirix/cloudwatch_metrics_agent"
 license = "MIT"
 readme = "README.md"
 description = "An agent for sending custom CPU and memory metrics to Cloudwatch"
+categories = ["command-line-utilities"]
+keywords = ["aws", "metrics"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
