@@ -6,6 +6,7 @@ mod cloudwatch;
 pub mod config;
 mod metrics;
 mod publisher;
+mod memory;
 
 use log::{debug, error, info, warn};
 use std::sync::Arc;

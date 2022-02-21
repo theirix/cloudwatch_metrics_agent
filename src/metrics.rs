@@ -1,3 +1,5 @@
+use crate::memory::collect_memory;
+
 use chrono::{DateTime, Utc};
 use log::*;
 use rstats::mutstats::minmax;
@@ -53,7 +55,8 @@ pub fn create_measurement(sys: &mut System) -> Measurement {
     };
     let cpu_utilization: f64 = cpu_avg;
 
-    let mem_val = (sys.used_memory() as f64) / (sys.total_memory() as f64);
+    let memory_measurement = collect_memory(sys);
+    let mem_val = memory_measurement.utilization;
     let mem_utilization: f64 = if !mem_val.is_nan() { mem_val } else { 0.0 };
 
     Measurement {
