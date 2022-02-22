@@ -63,6 +63,20 @@ impl MetricPublisher for CloudwatchPublisher {
                 .unit(aws_sdk_cloudwatch::model::StandardUnit::Percent)
                 .build(),
         );
+        request_builder = request_builder.metric_data(
+            aws_sdk_cloudwatch::model::MetricDatum::builder()
+                .dimensions(
+                    aws_sdk_cloudwatch::model::Dimension::builder()
+                        .name("ServiceName")
+                        .value(&self.config.service_name)
+                        .build(),
+                )
+                .metric_name("MaxMemoryUtilization")
+                .value(measurement.max_mem_utilization)
+                .timestamp(measurement.timestamp.into())
+                .unit(aws_sdk_cloudwatch::model::StandardUnit::Percent)
+                .build(),
+        );
         if let Err(err) = request_builder.send().await {
             Err(err.into())
         } else {

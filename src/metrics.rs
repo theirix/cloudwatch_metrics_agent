@@ -21,10 +21,11 @@ impl fmt::Debug for Measurement {
         let dt: DateTime<Utc> = self.timestamp.into();
         write!(
             fmt,
-            "Measurement {{ ts {}, cpu {:.3}, mem {:.3} }}",
+            "Measurement {{ ts {}, cpu {:.3}, mem {:.3}, maxmem {:.3} }}",
             dt.to_rfc3339(),
             self.cpu_utilization,
-            self.mem_utilization
+            self.mem_utilization,
+            self.max_mem_utilization
         )?;
         Ok(())
     }
