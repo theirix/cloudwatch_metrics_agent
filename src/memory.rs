@@ -67,6 +67,20 @@ fn collect_memory_sysinfo(sys: &mut System) -> MemoryMeasurement {
     MemoryMeasurement { utilization }
 }
 
+/// Write memory info to writer
+pub fn collect_memory_info<W: std::fmt::Write>(f: &mut W, sys: &mut System) {
+    writeln!(
+        f,
+        "Sysinfo: used memory {}, system memory {}",
+        sys.used_memory(),
+        sys.total_memory()
+    )
+    .unwrap();
+    if let Ok(limit) = read_cgroups_v1_limit() {
+        writeln!(f, "cgroups v1: limit {}", limit).unwrap();
+    }
+}
+
 /// Detect system memory usage
 pub fn collect_memory(sys: &mut System) -> MemoryMeasurement {
     if let Some(mem) = collect_memory_cgroups_v1() {

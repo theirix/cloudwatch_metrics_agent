@@ -1,4 +1,4 @@
-use crate::memory::collect_memory;
+use crate::memory::*;
 
 use chrono::{DateTime, Utc};
 use log::*;
@@ -102,6 +102,14 @@ pub fn aggregate(series: &[Measurement]) -> Option<Measurement> {
         max_mem_utilization: max_mem,
         sample_count: series.len() as u32,
     })
+}
+
+/// Write generic system info into writer
+pub fn collect_info<W: std::fmt::Write>(f: &mut W, sys: &mut System) {
+    sys.refresh_cpu();
+    sys.refresh_memory();
+    collect_memory_info(f, sys);
+    writeln!(f, "Sysinfo: cpu count: {}", sys.processors().len()).unwrap();
 }
 
 /// Tests

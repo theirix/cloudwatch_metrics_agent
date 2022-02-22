@@ -48,6 +48,13 @@ async fn metrics_collector(
 ) {
     let mut sys = create_measurement_engine();
 
+    // Show metric information at first
+    let mut buf = String::new();
+    collect_info(&mut buf, &mut sys);
+    for line in buf.lines() {
+        info!("Initial info: {}", line);
+    }
+
     let mut series: Vec<Measurement> = vec![];
 
     loop {
