@@ -1,6 +1,6 @@
 [package]
 name = "cloudwatch_metrics_agent"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 authors = ["theirix <theirix@gmail.com>"]
 repository = "https://github.com/theirix/cloudwatch_metrics_agent"
