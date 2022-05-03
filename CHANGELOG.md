@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.6] - 2022-05-03
+### Changed
+- Report maximum memory utilization for cgroups v1
+- Upgraded dependencies
+
 ## [0.1.5] - 2022-02-22
 ### Added
 - Report system info about sysinfo and cgroups at start
