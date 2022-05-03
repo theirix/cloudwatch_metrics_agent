@@ -5,11 +5,25 @@ use sysinfo::{System, SystemExt};
 
 pub struct MemoryMeasurement {
     pub utilization: f64,
+    pub max_utilization: f64,
 }
 
 fn read_cgroups_v1_usage() -> Result<u64, Box<dyn std::error::Error>> {
     let err = std::io::Error::from(std::io::ErrorKind::NotFound);
     if let Ok(file) = File::open("/sys/fs/cgroup/memory/memory.usage_in_bytes") {
+        // file content is a value in bytes
+        return Ok(std::io::BufReader::new(file)
+            .lines()
+            .next()
+            .ok_or_else(|| Box::new(err))??
+            .parse::<u64>()?);
+    }
+    Err(Box::new(err))
+}
+
+fn read_cgroups_v1_max_usage() -> Result<u64, Box<dyn std::error::Error>> {
+    let err = std::io::Error::from(std::io::ErrorKind::NotFound);
+    if let Ok(file) = File::open("/sys/fs/cgroup/memory/memory.max_usage_in_bytes") {
         // file content is a value in bytes
         return Ok(std::io::BufReader::new(file)
             .lines()
@@ -52,10 +66,19 @@ fn read_cgroups_v1_limit() -> Result<u64, Box<dyn std::error::Error>> {
 /// Works only if memory limit is set (it is a case for Fargate containers)
 fn collect_memory_cgroups_v1() -> Option<MemoryMeasurement> {
     if let Ok(usage) = read_cgroups_v1_usage() {
-        if let Ok(limit) = read_cgroups_v1_limit() {
-            debug!("Got cgroups v1 memory usage {} and limit {}", usage, limit);
-            let utilization = (usage as f64) / (limit as f64);
-            return Some(MemoryMeasurement { utilization });
+        if let Ok(max_usage) = read_cgroups_v1_max_usage() {
+            if let Ok(limit) = read_cgroups_v1_limit() {
+                debug!(
+                    "Got cgroups v1 memory usage {}, max {} and limit {}",
+                    usage, max_usage, limit
+                );
+                let utilization = (usage as f64) / (limit as f64);
+                let max_utilization: f64 = (max_usage as f64) / (limit as f64);
+                return Some(MemoryMeasurement {
+                    utilization,
+                    max_utilization,
+                });
+            }
         }
     }
     None
@@ -64,7 +87,11 @@ fn collect_memory_cgroups_v1() -> Option<MemoryMeasurement> {
 /// Detect system memory usage using a standard memory info
 fn collect_memory_sysinfo(sys: &mut System) -> MemoryMeasurement {
     let utilization = (sys.used_memory() as f64) / (sys.total_memory() as f64);
-    MemoryMeasurement { utilization }
+    let max_utilization: f64 = read_cgroups_v1_max_usage().unwrap_or(0) as f64;
+    MemoryMeasurement {
+        utilization,
+        max_utilization,
+    }
 }
 
 /// Write memory info to writer
