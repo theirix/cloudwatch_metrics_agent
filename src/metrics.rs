@@ -91,7 +91,7 @@ pub fn aggregate(series: &[Measurement]) -> Option<Measurement> {
     let max_mem: f64 = minmax(
         &series
             .iter()
-            .map(|m| m.mem_utilization)
+            .map(|m| m.max_mem_utilization)
             .collect::<Vec<f64>>(),
     )
     .max;
