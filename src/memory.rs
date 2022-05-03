@@ -86,8 +86,9 @@ fn collect_memory_cgroups_v1() -> Option<MemoryMeasurement> {
 
 /// Detect system memory usage using a standard memory info
 fn collect_memory_sysinfo(sys: &mut System) -> MemoryMeasurement {
-    let utilization = (sys.used_memory() as f64) / (sys.total_memory() as f64);
-    let max_utilization: f64 = read_cgroups_v1_max_usage().unwrap_or(0) as f64;
+    let total = sys.total_memory() as f64;
+    let utilization = (sys.used_memory() as f64) / total;
+    let max_utilization: f64 = utilization;
     MemoryMeasurement {
         utilization,
         max_utilization,

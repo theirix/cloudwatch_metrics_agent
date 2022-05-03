@@ -39,6 +39,14 @@ pub fn create_measurement_engine() -> System {
     System::new_with_specifics(refresh_kind)
 }
 
+fn nan_to_zero(value: f64) -> f64 {
+    if !value.is_nan() {
+        value
+    } else {
+        0.0
+    }
+}
+
 pub fn create_measurement(sys: &mut System) -> Measurement {
     sys.refresh_cpu();
     sys.refresh_memory();
@@ -57,14 +65,12 @@ pub fn create_measurement(sys: &mut System) -> Measurement {
     let cpu_utilization: f64 = cpu_avg;
 
     let memory_measurement = collect_memory(sys);
-    let mem_val = memory_measurement.utilization;
-    let mem_utilization: f64 = if !mem_val.is_nan() { mem_val } else { 0.0 };
 
     Measurement {
         timestamp: SystemTime::now(),
         cpu_utilization,
-        mem_utilization,
-        max_mem_utilization: mem_utilization,
+        mem_utilization: nan_to_zero(memory_measurement.utilization),
+        max_mem_utilization: nan_to_zero(memory_measurement.max_utilization),
         sample_count: 1,
     }
 }
