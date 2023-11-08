@@ -2,8 +2,8 @@ use crate::memory::*;
 
 use chrono::{DateTime, Utc};
 use log::*;
-use rstats::mutstats::minmax;
-use rstats::Stats;
+use rstats::triangmat::Vecops;
+use rstats::Medianf64;
 use std::fmt;
 use std::time::SystemTime;
 use sysinfo::{ProcessRefreshKind, ProcessorExt, RefreshKind, System, SystemExt};
@@ -85,22 +85,19 @@ pub fn aggregate(series: &[Measurement]) -> Option<Measurement> {
         .map(|m| m.cpu_utilization)
         .collect::<Vec<f64>>()
         .median()
-        .unwrap()
-        .median;
+        .unwrap();
     let avg_mem: f64 = series
         .iter()
         .map(|m| m.mem_utilization)
         .collect::<Vec<f64>>()
         .median()
-        .unwrap()
-        .median;
-    let max_mem: f64 = minmax(
-        &series
-            .iter()
-            .map(|m| m.max_mem_utilization)
-            .collect::<Vec<f64>>(),
-    )
-    .max;
+        .unwrap();
+    let max_mem: f64 = series
+        .iter()
+        .map(|m| m.max_mem_utilization)
+        .collect::<Vec<f64>>()
+        .minmax()
+        .max;
     Some(Measurement {
         timestamp: series[series.len() - 1].timestamp,
         cpu_utilization: avg_cpu,
