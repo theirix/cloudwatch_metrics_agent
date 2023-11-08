@@ -6,7 +6,7 @@ use rstats::triangmat::Vecops;
 use rstats::Medianf64;
 use std::fmt;
 use std::time::SystemTime;
-use sysinfo::{ProcessRefreshKind, ProcessorExt, RefreshKind, System, SystemExt};
+use sysinfo::{CpuExt, CpuRefreshKind, ProcessRefreshKind, RefreshKind, System, SystemExt};
 
 pub struct Measurement {
     pub timestamp: SystemTime,
@@ -33,7 +33,7 @@ impl fmt::Debug for Measurement {
 
 pub fn create_measurement_engine() -> System {
     let refresh_kind = RefreshKind::new()
-        .with_cpu()
+        .with_cpu(CpuRefreshKind::new().with_cpu_usage())
         .with_memory()
         .with_processes(ProcessRefreshKind::everything());
     System::new_with_specifics(refresh_kind)
@@ -50,13 +50,13 @@ fn nan_to_zero(value: f64) -> f64 {
 pub fn create_measurement(sys: &mut System) -> Measurement {
     sys.refresh_cpu();
     sys.refresh_memory();
-    //for p in sys.processors() {
+    //for p in sys.cpus() {
     //println!(" cpu {}", p.cpu_usage());
     //}
     //println!();
 
-    let cpu_count = sys.processors().len();
-    let cpu_sum: f64 = sys.processors().iter().map(|p| p.cpu_usage() as f64).sum();
+    let cpu_count = sys.cpus().len();
+    let cpu_sum: f64 = sys.cpus().iter().map(|p| p.cpu_usage() as f64).sum();
     let cpu_avg = if cpu_count > 0 && !cpu_sum.is_nan() {
         cpu_sum / (cpu_count as f64) / 100.0
     } else {
@@ -112,7 +112,7 @@ pub fn collect_info<W: std::fmt::Write>(f: &mut W, sys: &mut System) {
     sys.refresh_cpu();
     sys.refresh_memory();
     collect_memory_info(f, sys);
-    writeln!(f, "Sysinfo: cpu count: {}", sys.processors().len()).unwrap();
+    writeln!(f, "Sysinfo: cpu count: {}", sys.cpus().len()).unwrap();
 }
 
 /// Tests
