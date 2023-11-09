@@ -39,7 +39,7 @@ fn read_cgroups_v1_limit() -> Result<u64, Box<dyn std::error::Error>> {
     if let Ok(file) = File::open("/sys/fs/cgroup/memory/memory.stat") {
         if let Some(hier_line) = std::io::BufReader::new(file)
             .lines()
-            .filter_map(|r| r.ok())
+            .map_while(Result::ok)
             .find(|s| s.starts_with("hierarchical_memory_limit "))
         {
             // line format is:
