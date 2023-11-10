@@ -4,11 +4,13 @@ use crate::publisher::MetricPublisher;
 
 use async_trait::async_trait;
 use aws_config::meta::region::RegionProviderChain;
+use aws_sdk_cloudwatch::types::{Dimension, MetricDatum, StandardUnit};
+use aws_sdk_cloudwatch::Client;
 use log::info;
 
 /// Sink implementation that sends metrics to Cloudwatch
 pub struct CloudwatchPublisher {
-    client: aws_sdk_cloudwatch::Client,
+    client: Client,
     config: CloudwatchConfig,
 }
 
@@ -19,10 +21,10 @@ pub async fn create_cloudwatch_publisher(config: CloudwatchConfig) -> Cloudwatch
     }
 }
 
-async fn create_client(_config: &CloudwatchConfig) -> aws_sdk_cloudwatch::Client {
+async fn create_client(_config: &CloudwatchConfig) -> Client {
     let region_provider = RegionProviderChain::default_provider();
     let shared_config = aws_config::from_env().region(region_provider).load().await;
-    aws_sdk_cloudwatch::Client::new(&shared_config)
+    Client::new(&shared_config)
 }
 
 #[async_trait]
@@ -36,9 +38,9 @@ impl MetricPublisher for CloudwatchPublisher {
             .namespace(&self.config.namespace);
 
         request_builder = request_builder.metric_data(
-            aws_sdk_cloudwatch::model::MetricDatum::builder()
+            MetricDatum::builder()
                 .dimensions(
-                    aws_sdk_cloudwatch::model::Dimension::builder()
+                    Dimension::builder()
                         .name("ServiceName")
                         .value(&self.config.service_name)
                         .build(),
@@ -46,13 +48,13 @@ impl MetricPublisher for CloudwatchPublisher {
                 .metric_name("CPUUtilization")
                 .value(measurement.cpu_utilization)
                 .timestamp(measurement.timestamp.into())
-                .unit(aws_sdk_cloudwatch::model::StandardUnit::Percent)
+                .unit(StandardUnit::Percent)
                 .build(),
         );
         request_builder = request_builder.metric_data(
-            aws_sdk_cloudwatch::model::MetricDatum::builder()
+            MetricDatum::builder()
                 .dimensions(
-                    aws_sdk_cloudwatch::model::Dimension::builder()
+                    Dimension::builder()
                         .name("ServiceName")
                         .value(&self.config.service_name)
                         .build(),
@@ -60,13 +62,13 @@ impl MetricPublisher for CloudwatchPublisher {
                 .metric_name("MemoryUtilization")
                 .value(measurement.mem_utilization)
                 .timestamp(measurement.timestamp.into())
-                .unit(aws_sdk_cloudwatch::model::StandardUnit::Percent)
+                .unit(StandardUnit::Percent)
                 .build(),
         );
         request_builder = request_builder.metric_data(
-            aws_sdk_cloudwatch::model::MetricDatum::builder()
+            MetricDatum::builder()
                 .dimensions(
-                    aws_sdk_cloudwatch::model::Dimension::builder()
+                    Dimension::builder()
                         .name("ServiceName")
                         .value(&self.config.service_name)
                         .build(),
@@ -74,7 +76,7 @@ impl MetricPublisher for CloudwatchPublisher {
                 .metric_name("MaxMemoryUtilization")
                 .value(measurement.max_mem_utilization)
                 .timestamp(measurement.timestamp.into())
-                .unit(aws_sdk_cloudwatch::model::StandardUnit::Percent)
+                .unit(StandardUnit::Percent)
                 .build(),
         );
         if let Err(err) = request_builder.send().await {
