@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.7] - 2023-11-11
+### Changed
+- Better terminal detection
+- Upgraded dependencies
+
 ## [0.1.6] - 2022-05-03
 ### Changed
 - Report maximum memory utilization for cgroups v1
