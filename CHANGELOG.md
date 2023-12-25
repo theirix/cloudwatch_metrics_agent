@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.8] - 2023-12-25
+### Changed
+- Use stable aws-sdk
+- Switch to clap
+
 ## [0.1.7] - 2023-11-11
 ### Changed
 - Better terminal detection
