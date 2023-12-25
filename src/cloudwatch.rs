@@ -4,6 +4,7 @@ use crate::publisher::MetricPublisher;
 
 use async_trait::async_trait;
 use aws_config::meta::region::RegionProviderChain;
+use aws_config::BehaviorVersion;
 use aws_sdk_cloudwatch::types::{Dimension, MetricDatum, StandardUnit};
 use aws_sdk_cloudwatch::Client;
 use log::info;
@@ -23,7 +24,10 @@ pub async fn create_cloudwatch_publisher(config: CloudwatchConfig) -> Cloudwatch
 
 async fn create_client(_config: &CloudwatchConfig) -> Client {
     let region_provider = RegionProviderChain::default_provider();
-    let shared_config = aws_config::from_env().region(region_provider).load().await;
+    let shared_config = aws_config::defaults(BehaviorVersion::latest())
+        .region(region_provider)
+        .load()
+        .await;
     Client::new(&shared_config)
 }
 
