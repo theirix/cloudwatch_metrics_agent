@@ -1,7 +1,7 @@
 use log::debug;
 use std::fs::File;
 use std::io::BufRead;
-use sysinfo::{System, SystemExt};
+use sysinfo::System;
 
 pub struct MemoryMeasurement {
     pub utilization: f64,

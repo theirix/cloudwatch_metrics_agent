@@ -6,7 +6,7 @@ use rstats::triangmat::Vecops;
 use rstats::Medianf64;
 use std::fmt;
 use std::time::SystemTime;
-use sysinfo::{CpuExt, CpuRefreshKind, ProcessRefreshKind, RefreshKind, System, SystemExt};
+use sysinfo::{CpuRefreshKind, MemoryRefreshKind, ProcessRefreshKind, RefreshKind, System};
 
 pub struct Measurement {
     pub timestamp: SystemTime,
@@ -34,7 +34,7 @@ impl fmt::Debug for Measurement {
 pub fn create_measurement_engine() -> System {
     let refresh_kind = RefreshKind::new()
         .with_cpu(CpuRefreshKind::new().with_cpu_usage())
-        .with_memory()
+        .with_memory(MemoryRefreshKind::new().with_ram())
         .with_processes(ProcessRefreshKind::everything());
     System::new_with_specifics(refresh_kind)
 }
