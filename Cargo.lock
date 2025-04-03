@@ -705,7 +705,7 @@ checksum = "f46ad14479a25103f283c0f10005961cf086d8dc42205bb44c46ac563475dca6"
 
 [[package]]
 name = "cloudwatch_metrics_agent"
-version = "0.1.8"
+version = "0.1.10"
 dependencies = [
  "async-trait",
  "aws-config",
