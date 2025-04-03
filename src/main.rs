@@ -33,9 +33,7 @@ async fn main() -> Result<(), aws_sdk_cloudwatch::Error> {
         service_name: opt.service_name,
     };
 
-    main_runner(cloudwatch_config, opt.dryrun, opt.period)
-        .await
-        .unwrap();
+    main_runner(cloudwatch_config, opt.dryrun, opt.period).await?;
 
     info!("Done");
     Ok(())

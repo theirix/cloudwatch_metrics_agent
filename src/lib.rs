@@ -133,7 +133,7 @@ pub async fn handle_shutdown(
         _ = signal::ctrl_c() => {},
         _ = stream_sigterm.recv() => {},
         _ = rx_additional_shutdown.recv() => {},
-    };
+    }
 
     info!("Got terminate condition");
 
