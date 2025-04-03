@@ -3,32 +3,63 @@ use crate::metrics::Measurement;
 use crate::publisher::MetricPublisher;
 
 use async_trait::async_trait;
+use aws_config::imds::client::Client as ImdsClient;
 use aws_config::meta::region::RegionProviderChain;
-use aws_config::BehaviorVersion;
+use aws_config::{BehaviorVersion, SdkConfig};
 use aws_sdk_cloudwatch::types::{Dimension, MetricDatum, StandardUnit};
 use aws_sdk_cloudwatch::Client;
-use log::info;
+use log::{info, warn};
+use std::collections::HashMap;
 
 /// Sink implementation that sends metrics to Cloudwatch
 pub struct CloudwatchPublisher {
     client: Client,
     config: CloudwatchConfig,
+    tags: HashMap<String, String>,
 }
 
 pub async fn create_cloudwatch_publisher(config: CloudwatchConfig) -> CloudwatchPublisher {
+    let aws_config = get_aws_config().await;
+    let tags: HashMap<String, String> = match get_instance_id().await {
+        Some(instance_id) => HashMap::from([("InstanceId".to_string(), instance_id)]),
+        None => HashMap::new(),
+    };
+    info!("Using tags: {:?}", &tags);
     CloudwatchPublisher {
-        client: create_client(&config).await,
+        client: create_client(&config, &aws_config).await,
         config,
+        tags,
     }
 }
 
-async fn create_client(_config: &CloudwatchConfig) -> Client {
+async fn get_aws_config() -> SdkConfig {
     let region_provider = RegionProviderChain::default_provider();
-    let shared_config = aws_config::defaults(BehaviorVersion::latest())
+    aws_config::defaults(BehaviorVersion::latest())
         .region(region_provider)
         .load()
-        .await;
-    Client::new(&shared_config)
+        .await
+}
+
+async fn get_ec2_instance_id() -> Result<String, Box<dyn std::error::Error>> {
+    let client = ImdsClient::builder().build();
+    let response = client.get("/latest/meta-data/instance-id").await?;
+    let instance_id: String = response.into();
+    info!("Get instance-id: {}", &instance_id);
+    Ok(instance_id)
+}
+
+async fn get_instance_id() -> Option<String> {
+    match get_ec2_instance_id().await {
+        Ok(instance_id) => Some(instance_id),
+        Err(err) => {
+            warn!("Cannot get EC2 instance id: {}", &err);
+            None
+        }
+    }
+}
+
+async fn create_client(_config: &CloudwatchConfig, aws_config: &SdkConfig) -> Client {
+    Client::new(aws_config)
 }
 
 #[async_trait]
