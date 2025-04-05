@@ -74,52 +74,41 @@ impl MetricPublisher for CloudwatchPublisher {
             .put_metric_data()
             .namespace(&self.config.namespace);
 
+        let mut metric_datum_builder = MetricDatum::builder().dimensions(
+            Dimension::builder()
+                .name("ServiceName")
+                .value(&self.config.service_name)
+                .build(),
+        );
+        for (tag, value) in &self.tags {
+            metric_datum_builder = metric_datum_builder
+                .dimensions(Dimension::builder().name(tag).value(value).build());
+        }
+        metric_datum_builder = metric_datum_builder
+            .timestamp(measurement.timestamp.into())
+            .unit(StandardUnit::Percent);
+
         request_builder = request_builder.metric_data(
-            MetricDatum::builder()
-                .dimensions(
-                    Dimension::builder()
-                        .name("ServiceName")
-                        .value(&self.config.service_name)
-                        .build(),
-                )
+            metric_datum_builder
+                .clone()
                 .metric_name("CPUUtilization")
                 .value(measurement.cpu_utilization)
-                .timestamp(measurement.timestamp.into())
-                .unit(StandardUnit::Percent)
                 .build(),
         );
         request_builder = request_builder.metric_data(
-            MetricDatum::builder()
-                .dimensions(
-                    Dimension::builder()
-                        .name("ServiceName")
-                        .value(&self.config.service_name)
-                        .build(),
-                )
+            metric_datum_builder
+                .clone()
                 .metric_name("MemoryUtilization")
                 .value(measurement.mem_utilization)
-                .timestamp(measurement.timestamp.into())
-                .unit(StandardUnit::Percent)
                 .build(),
         );
         request_builder = request_builder.metric_data(
-            MetricDatum::builder()
-                .dimensions(
-                    Dimension::builder()
-                        .name("ServiceName")
-                        .value(&self.config.service_name)
-                        .build(),
-                )
+            metric_datum_builder
+                .clone()
                 .metric_name("MaxMemoryUtilization")
                 .value(measurement.max_mem_utilization)
-                .timestamp(measurement.timestamp.into())
-                .unit(StandardUnit::Percent)
                 .build(),
         );
-        if let Err(err) = request_builder.send().await {
-            Err(err.into())
-        } else {
-            Ok(())
-        }
+        request_builder.send().await.map(|_| ()).map_err(Into::into)
     }
 }
