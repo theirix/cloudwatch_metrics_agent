@@ -88,7 +88,7 @@ async fn get_fargate_instance_id_from(url: String) -> Result<String, Box<dyn std
         .and_then(|task_arn| task_arn.as_str())
         .ok_or_else(|| "No TaskARN found in Fargate metadata".to_string())?
         .split('/')
-        .last()
+        .next_back()
         .ok_or_else(|| "No TaskARN found in Fargate metadata".to_string())?
         .to_string();
     info!("Get instance-id: {}", &instance_id);
