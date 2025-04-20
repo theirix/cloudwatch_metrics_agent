@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - Support publishing Fargate task id as an instance-id tag
+- Option to control InstanceId publishing
 
 ## [0.1.11] - 2025-04-05
 ### Added

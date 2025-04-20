@@ -5,4 +5,5 @@ pub struct CloudwatchConfig {
     pub namespace: String,
     pub service_name: String,
     pub tags: HashMap<String, String>,
+    pub publish_instance_id: bool,
 }

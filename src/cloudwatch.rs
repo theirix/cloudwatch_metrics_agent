@@ -22,9 +22,13 @@ pub struct CloudwatchPublisher {
 pub async fn create_cloudwatch_publisher(config: CloudwatchConfig) -> CloudwatchPublisher {
     let aws_config = get_aws_config().await;
     info!("Using custom tags: {:?}", &config.tags);
-    let mut tags: HashMap<String, String> = match get_instance_id().await {
-        Some(instance_id) => HashMap::from([("InstanceId".to_string(), instance_id)]),
-        None => HashMap::new(),
+    let mut tags: HashMap<String, String> = if config.publish_instance_id {
+        match get_instance_id().await {
+            Some(instance_id) => HashMap::from([("InstanceId".to_string(), instance_id)]),
+            None => HashMap::new(),
+        }
+    } else {
+        HashMap::new()
     };
     tags.extend(config.tags.clone());
     info!("Using tags: {:?}", &tags);

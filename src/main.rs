@@ -25,6 +25,10 @@ struct Opt {
     /// Custom tags in format '--tags tag1 value1 --tags tag2 value2'
     #[arg(long, value_names = ["tag", "value"], num_args = 2, action = clap::ArgAction::Append)]
     tags: Vec<String>,
+
+    /// Whether to publish InstanceId
+    #[arg(long, default_value_t = true)]
+    publish_instance_id: bool,
 }
 
 #[tokio::main]
@@ -42,6 +46,7 @@ async fn main() -> Result<(), aws_sdk_cloudwatch::Error> {
         namespace: opt.namespace,
         service_name: opt.service_name,
         tags,
+        publish_instance_id: opt.publish_instance_id,
     };
 
     main_runner(cloudwatch_config, opt.dryrun, opt.period).await?;
