@@ -75,18 +75,18 @@ pub fn aggregate(series: &[Measurement]) -> Option<Measurement> {
         return None;
     }
     debug!("Got aggregated {} from {} measurements", 1, series.len());
-    let avg_cpu: f64 = series
+    let median_cpu: f64 = series
         .iter()
         .map(|m| m.cpu_utilization)
         .collect::<Vec<f64>>()
-        .median()
-        .unwrap();
-    let avg_mem: f64 = series
+        .medf_checked()
+        .unwrap_or(f64::NAN);
+    let median_mem: f64 = series
         .iter()
         .map(|m| m.mem_utilization)
         .collect::<Vec<f64>>()
-        .median()
-        .unwrap();
+        .medf_checked()
+        .unwrap_or(f64::NAN);
     let max_mem: f64 = series
         .iter()
         .map(|m| m.max_mem_utilization)
@@ -95,8 +95,8 @@ pub fn aggregate(series: &[Measurement]) -> Option<Measurement> {
         .max;
     Some(Measurement {
         timestamp: series[series.len() - 1].timestamp,
-        cpu_utilization: avg_cpu,
-        mem_utilization: avg_mem,
+        cpu_utilization: median_cpu,
+        mem_utilization: median_mem,
         max_mem_utilization: max_mem,
         sample_count: series.len() as u32,
     })
