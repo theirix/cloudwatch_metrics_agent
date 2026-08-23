@@ -147,7 +147,7 @@ mod tests {
 
     #[test]
     fn test_aggregate_empty() {
-        assert!(aggregate(&vec![]).is_none());
+        assert!(aggregate(&[]).is_none());
     }
 
     #[test]

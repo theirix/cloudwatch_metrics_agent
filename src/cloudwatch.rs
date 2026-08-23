@@ -21,7 +21,7 @@ pub struct CloudwatchPublisher {
 
 pub async fn create_cloudwatch_publisher(config: CloudwatchConfig) -> CloudwatchPublisher {
     let aws_config = get_aws_config().await;
-    info!("Using custom tags: {:?}", &config.tags);
+    info!("Using custom tags: {:?}", config.tags);
     let mut tags: HashMap<String, String> = if config.publish_instance_id {
         match get_instance_id().await {
             Some(instance_id) => HashMap::from([("InstanceId".to_string(), instance_id)]),
@@ -31,7 +31,7 @@ pub async fn create_cloudwatch_publisher(config: CloudwatchConfig) -> Cloudwatch
         HashMap::new()
     };
     tags.extend(config.tags.clone());
-    info!("Using tags: {:?}", &tags);
+    info!("Using tags: {:?}", tags);
     CloudwatchPublisher {
         client: create_client(&config, &aws_config).await,
         config,
@@ -51,7 +51,7 @@ async fn get_ec2_instance_id() -> Result<String, Box<dyn std::error::Error>> {
     let client = ImdsClient::builder().build();
     let response = client.get("/latest/meta-data/instance-id").await?;
     let instance_id: String = response.into();
-    info!("Get instance-id: {}", &instance_id);
+    info!("Get instance-id: {}", instance_id);
     Ok(instance_id)
 }
 
@@ -75,7 +75,7 @@ async fn get_fargate_instance_id_from(url: String) -> Result<String, Box<dyn std
         .get(&url)
         .send()
         .await
-        .map_err(|err| format!("Failed to make request to {}: {}", &url, err))?;
+        .map_err(|err| format!("Failed to make request to {}: {}", url, err))?;
     if !response.status().is_success() {
         return Err(Box::from(
             format!("Unexpected response code={}", response.status()).to_string(),
@@ -95,7 +95,7 @@ async fn get_fargate_instance_id_from(url: String) -> Result<String, Box<dyn std
         .next_back()
         .ok_or_else(|| "No TaskARN found in Fargate metadata".to_string())?
         .to_string();
-    info!("Get instance-id: {}", &instance_id);
+    info!("Get instance-id: {}", instance_id);
     Ok(instance_id)
 }
 
@@ -103,12 +103,12 @@ async fn get_instance_id() -> Option<String> {
     match get_ec2_instance_id().await {
         Ok(instance_id) => Some(instance_id),
         Err(err) => {
-            warn!("Cannot get EC2 instance id: {}", &err);
+            warn!("Cannot get EC2 instance id: {}", err);
             debug!("Trying Fargate");
             match get_fargate_instance_id().await {
                 Ok(instance_id) => Some(instance_id),
                 Err(err) => {
-                    warn!("Cannot get Fargate instance id: {}", &err);
+                    warn!("Cannot get Fargate instance id: {}", err);
                     None
                 }
             }

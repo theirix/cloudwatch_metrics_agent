@@ -120,6 +120,7 @@ async fn metrics_publisher(
     info!("Publisher finished");
 }
 
+#[allow(clippy::result_large_err)]
 pub async fn handle_shutdown(
     tx_collector_shutdown: mpsc::Sender<CollectorMessage>,
     tx_publisher_shutdown: mpsc::Sender<PublisherMessage>,
@@ -163,6 +164,7 @@ pub async fn handle_shutdown(
 }
 
 /// Entry point that orchestrate tasks and shutdown
+#[allow(clippy::result_large_err)]
 pub async fn main_runner(
     cloudwatch_config: CloudwatchConfig,
     dryrun: bool,
@@ -313,7 +315,7 @@ mod tests {
             measurement: Measurement,
         ) -> Result<(), Box<dyn std::error::Error>> {
             self.counter += 1;
-            if (self.counter % 2) == 0 {
+            if self.counter.is_multiple_of(2) {
                 return Err(Box::new(std::env::VarError::NotPresent));
             }
             self.measurements.push(measurement);

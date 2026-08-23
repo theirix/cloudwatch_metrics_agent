@@ -39,7 +39,9 @@ async fn main() -> Result<(), aws_sdk_cloudwatch::Error> {
     let opt = Opt::parse();
     let tags: HashMap<String, String> = opt
         .tags
-        .chunks_exact(2)
+        .as_chunks::<2>()
+        .0
+        .iter()
         .map(|pair| (pair[0].clone(), pair[1].clone()))
         .collect();
     let cloudwatch_config = CloudwatchConfig {
