@@ -1,6 +1,4 @@
 #![allow(dead_code)]
-//#![allow(unused_variables)]
-//#![allow(unused_imports)]
 
 mod cloudwatch;
 pub mod config;
@@ -9,6 +7,7 @@ mod metrics;
 mod publisher;
 
 use log::{debug, error, info, warn};
+use std::error::Error;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::signal;
@@ -127,11 +126,13 @@ pub async fn handle_shutdown(
     rx_additional_shutdown: &mut mpsc::Receiver<()>,
     collector_task: tokio::task::JoinHandle<()>,
     publisher_task: tokio::task::JoinHandle<()>,
-) -> Result<(), aws_sdk_cloudwatch::Error> {
+) -> Result<(), Box<dyn Error + Send + Sync>> {
     // stream of SIGTERM signals
-    let mut stream_sigterm = signal_unix::signal(signal_unix::SignalKind::terminate()).unwrap();
+    let mut stream_sigterm = signal_unix::signal(signal_unix::SignalKind::terminate())?;
     tokio::select! {
-        _ = signal::ctrl_c() => {},
+        result = signal::ctrl_c() => {
+            result?;
+        },
         _ = stream_sigterm.recv() => {},
         _ = rx_additional_shutdown.recv() => {},
     }
@@ -142,21 +143,14 @@ pub async fn handle_shutdown(
     info!("Aggregate last time");
     tx_collector_shutdown
         .send(CollectorMessage::Aggregation)
-        .await
-        .unwrap();
-    tx_collector_shutdown
-        .send(CollectorMessage::Quit)
-        .await
-        .unwrap();
-    let _ = collector_task.await;
+        .await?;
+    tx_collector_shutdown.send(CollectorMessage::Quit).await?;
+    collector_task.await?;
 
     // Wait for publisher
     info!("Wait for publisher task completion...");
-    tx_publisher_shutdown
-        .send(PublisherMessage::Quit)
-        .await
-        .unwrap();
-    let _ = publisher_task.await;
+    tx_publisher_shutdown.send(PublisherMessage::Quit).await?;
+    publisher_task.await?;
 
     info!("All tasks completed");
 
@@ -169,7 +163,7 @@ pub async fn main_runner(
     cloudwatch_config: CloudwatchConfig,
     dryrun: bool,
     period: u32,
-) -> Result<(), aws_sdk_cloudwatch::Error> {
+) -> Result<(), Box<dyn Error + Send + Sync>> {
     let (tx_metric, mut rx_metric) = mpsc::channel(4);
     let tx_publisher_shutdown = tx_metric.clone();
 
@@ -212,8 +206,7 @@ pub async fn main_runner(
         collector_task,
         publisher_task,
     )
-    .await?;
-    Ok(())
+    .await
 }
 
 /// Tests

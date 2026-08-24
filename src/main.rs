@@ -32,8 +32,7 @@ struct Opt {
 }
 
 #[tokio::main]
-#[allow(clippy::result_large_err)]
-async fn main() -> Result<(), aws_sdk_cloudwatch::Error> {
+async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     env_logger::Builder::from_default_env().init();
 
     let opt = Opt::parse();
