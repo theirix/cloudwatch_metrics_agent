@@ -1,8 +1,6 @@
-#![allow(dead_code)]
-
 mod cloudwatch;
+mod collector;
 pub mod config;
-mod memory;
 mod metrics;
 mod publisher;
 
@@ -17,6 +15,8 @@ use tokio::sync::mpsc::error::TryRecvError;
 use tokio::sync::Mutex as TokioMutex;
 
 use crate::cloudwatch::create_cloudwatch_publisher;
+use crate::collector::Collector;
+use crate::collector::MemoryCollector;
 use crate::config::CloudwatchConfig;
 use crate::metrics::*;
 use crate::publisher::{ConsolePublisher, MetricPublisher};
@@ -45,13 +45,17 @@ async fn metrics_collector(
     tx: mpsc::Sender<PublisherMessage>,
     rx_aggregation: &mut mpsc::Receiver<CollectorMessage>,
 ) {
-    let mut sys = create_measurement_engine();
+    let sys = create_measurement_engine();
+    let mut collector = Collector::new(sys);
 
     // Show metric information at first
     let mut buf = String::new();
-    collect_info(&mut buf, &mut sys);
-    for line in buf.lines() {
-        info!("Initial info: {}", line);
+    if let Err(err) = collector.write_info(&mut buf) {
+        error!("Cannot gather system info: {}", err);
+    } else {
+        for line in buf.lines() {
+            info!("Initial info: {}", line);
+        }
     }
 
     let mut series: Vec<Measurement> = vec![];
@@ -59,8 +63,11 @@ async fn metrics_collector(
     loop {
         debug!("Metric tick");
 
-        let measurement = create_measurement(&mut sys);
-        series.push(measurement);
+        if let Ok(measurement) = create_measurement(&mut collector) {
+            series.push(measurement);
+        } else {
+            warn!("Failed to collect measurement");
+        }
 
         match rx_aggregation.try_recv() {
             Ok(message) => {

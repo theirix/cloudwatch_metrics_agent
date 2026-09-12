@@ -1,5 +1,5 @@
-use crate::memory::*;
-
+use crate::collector::Collector;
+use crate::collector::MeasurementError;
 use chrono::{DateTime, Utc};
 use log::*;
 use rstats::triangmat::Vecops;
@@ -46,28 +46,18 @@ fn nan_to_zero(value: f64) -> f64 {
     }
 }
 
-pub fn create_measurement(sys: &mut System) -> Measurement {
-    sys.refresh_cpu_all();
-    sys.refresh_memory();
+pub fn create_measurement(collector: &mut Collector) -> Result<Measurement, MeasurementError> {
+    collector.refresh();
 
-    let cpu_count = sys.cpus().len();
-    let cpu_sum: f64 = sys.cpus().iter().map(|p| p.cpu_usage() as f64).sum();
-    let cpu_avg = if cpu_count > 0 && !cpu_sum.is_nan() {
-        cpu_sum / (cpu_count as f64) / 100.0
-    } else {
-        0.0
-    };
-    let cpu_utilization: f64 = cpu_avg;
+    let system_measurement = collector.collect_system()?;
 
-    let memory_measurement = collect_memory(sys);
-
-    Measurement {
+    Ok(Measurement {
         timestamp: SystemTime::now(),
-        cpu_utilization,
-        mem_utilization: nan_to_zero(memory_measurement.utilization),
-        max_mem_utilization: nan_to_zero(memory_measurement.max_utilization),
+        cpu_utilization: system_measurement.cpu.utilization,
+        mem_utilization: nan_to_zero(system_measurement.memory.utilization),
+        max_mem_utilization: nan_to_zero(system_measurement.memory.max_utilization),
         sample_count: 1,
-    }
+    })
 }
 
 pub fn aggregate(series: &[Measurement]) -> Option<Measurement> {
@@ -102,14 +92,6 @@ pub fn aggregate(series: &[Measurement]) -> Option<Measurement> {
     })
 }
 
-/// Write generic system info into writer
-pub fn collect_info<W: std::fmt::Write>(f: &mut W, sys: &mut System) {
-    sys.refresh_cpu_all();
-    sys.refresh_memory();
-    collect_memory_info(f, sys);
-    writeln!(f, "Sysinfo: cpu count: {}", sys.cpus().len()).unwrap();
-}
-
 /// Tests
 #[cfg(test)]
 mod tests {
@@ -120,8 +102,8 @@ mod tests {
 
     #[test]
     fn test_measurement() {
-        let mut engine = create_measurement_engine();
-        let measurement = create_measurement(&mut engine);
+        let mut collector = Collector::new(create_measurement_engine());
+        let measurement = create_measurement(&mut collector).unwrap();
         assert!(!measurement.cpu_utilization.is_nan());
         assert!(!measurement.mem_utilization.is_nan());
 
@@ -131,9 +113,9 @@ mod tests {
 
     #[test]
     fn test_measurement_times() {
-        let mut engine = create_measurement_engine();
+        let mut collector = Collector::new(create_measurement_engine());
         for _ in 0..10 {
-            let measurement = create_measurement(&mut engine);
+            let measurement = create_measurement(&mut collector).unwrap();
             println!("{:?}", measurement);
             assert!(!measurement.cpu_utilization.is_nan());
             assert!(!measurement.mem_utilization.is_nan());
